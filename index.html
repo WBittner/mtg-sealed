@@ -1,1 +1,343 @@
-<h1>MTG</h1>
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #07101f;
+  --surface: rgba(8, 17, 33, 0.94);
+  --surface-strong: rgba(15, 27, 52, 0.98);
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #f5f7fb;
+  --muted: #9fb7cc;
+  --accent: #5ad8ff;
+  --accent-soft: rgba(90, 216, 255, 0.14);
+}
+html {
+  min-height: 100%;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',sans-serif;
+  background: radial-gradient(circle at top, #12243b 0%, #07101f 40%, #02060f 100%);
+  color: var(--text);
+  padding: 24px;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(21, 47, 79, 0.12), transparent 40%);
+  pointer-events: none;
+}
+h1 {
+  margin: 0 0 20px;
+  font-size: clamp(2rem, 2.5vw, 3rem);
+  letter-spacing: -0.04em;
+}
+#controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  padding: 18px 20px;
+  margin-bottom: 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
+}
+label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-size: 0.97rem;
+}
+select,
+input {
+  min-width: 120px;
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  padding: 10px 12px;
+}
+input::placeholder {
+  color: var(--muted);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(13, 28, 52, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.16);
+}
+th,
+td {
+  padding: 16px 20px;
+  text-align: left;
+}
+th {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-size: 0.96rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+tbody tr:last-child {
+  border-bottom: none;
+}
+tbody tr:hover {
+  background: rgba(90, 216, 255, 0.06);
+}
+td img {
+  display: block;
+  border-radius: 14px;
+}
+.links-cell a {
+  display: inline-flex;
+  align-items: center;
+}
+.links-cell a + a {
+  margin-left: 14px;
+}
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  color: #8ce7ff;
+}
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 760px) {
+  body {
+    padding: 16px;
+  }
+  #controls {
+    padding: 16px;
+    gap: 10px;
+  }
+  label {
+    width: 100%;
+    justify-content: space-between;
+  }
+  select,
+  input {
+    width: 100%;
+    min-width: 0;
+  }
+  th,
+  td {
+    padding: 12px 14px;
+  }
+  td img {
+    max-width: 64px;
+    max-height: 64px;
+  }
+  .links-cell a + a {
+    margin-left: 10px;
+  }
+}
+</style>
+<h1>MTG Sealed Inventory</h1>
+<div id="controls">
+  <label>
+    Sort by:
+    <select id="sort-select">
+      <option value="none">None</option>
+      <option value="packs-asc">Packs ▲</option>
+      <option value="packs-desc" selected>Packs ▼</option>
+    </select>
+  </label>
+  <label>
+    Packs min:
+    <input id="filter-packs-min" type="number" min="0" placeholder="0">
+  </label>
+</div>
+<div class="table-wrapper">
+<table>
+  <thead>
+    <tr>
+      <th>Image</th>
+      <th>Name of pack</th>
+      <th>Amount of packs</th>
+      <th>Links</th>
+    </tr>
+  </thead>
+  <tbody id="sealed-packs-body">
+  </tbody>
+</table>
+</div>
+
+<script>  
+  const IMAGE_BASE = 'https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/';
+
+  const sealedPacks = [
+    { name: 'Streets of New Capenna', setCode: 'SNC', packs: 21, image: 'f/f1/New_Capenna_logo.png' },
+    { name: 'Kaldheim', setCode: 'KHM', packs: 32, image: '8/81/Kaldheim_logo.png' },
+    { name: 'The Lost Caverns of Ixalan', setCode: 'LCI', packs: 21, image: '0/0a/The_Lost_Caverns_of_Ixalan.png' },
+    { name: 'Innistrad: Crimson Vow', setCode: 'VOW', packs: 21, image: '3/3b/Crimson_Vow_logo.png' },
+    { name: 'Bloomburrow', setCode: 'BLB', packs: 15, image: 'f/f4/Bloomburrow_logo.jpg' },
+    { name: 'Dominaria United', setCode: 'DMU', packs: 21, image: '7/70/Dominaria_United_Logo.png' },
+    { name: 'Zendikar Rising', setCode: 'ZNR', packs: 18, image: '2/2b/ZNR_logo.png' },
+    { name: 'The Brothers\' War', setCode: 'BRO', packs: 21, image: 'f/f7/The_Brothers%27_War.jpg' },
+    { name: 'Phyrexia: All Will Be One', setCode: 'ONE', packs: 21, image: '/a/a1/ONE_logo.jpg' },
+    { name: 'Tarkir: Dragonstorm', setCode: 'TDM', packs: 24, image: '4/4b/Tarkir_Dragonstorm_logo.png' },
+    { name: 'Aetherdrift', setCode: 'DFT', packs: 15, image: '0/05/Aetherdrift_logo.png' },
+    { name: 'Kamigawa: Neon Dynasty', setCode: 'NEO', packs: 18, image: 'e/ea/Neon_Dynasty_logo.png' },
+    { name: 'Modern Horizons 3', setCode: 'MH3', packs: 24, image: '4/40/MH3_logo.jpg' },
+    { name: 'Mystery Booster', setCode: 'MB1', packs: 17, image: '9/95/Mystery_Booster_logo.png' },
+    { name: 'Double Masters 2022', setCode: '2X2', packs: 12, image: 'b/bc/2X2logo.png' },
+    { name: 'Ultimate Masters', setCode: 'UMA', packs: 24, image: '0/02/UMA_logo.png' },
+    { name: 'Outlaws of Thunder Junction', setCode: 'OTJ', packs: 12, image: '5/5a/Outlaws_logo.jpg' },
+    { name: 'Wilds of Eldraine', setCode: 'WOE', packs: 12, image: '1/16/Wilds_of_Eldraine.png' },
+    { name: 'Ravnica Allegiance', setCode: 'RNA', packs: 11, image: '8/84/RNA_Logo.jpg' },
+    { name: 'Ikoria: Lair of Behemoths', setCode: 'IKO', packs: 10, image: 'd/d4/ILB_logo.png' },
+    { name: 'Core Set 2021', setCode: 'M21', packs: 9, image: '6/68/M21_logo.png' },
+    { name: 'Theros Beyond Death', setCode: 'THB', packs: 8, image: '2/2c/Theros_Beyond_Death_logo.png' },
+    { name: 'Teenage Mutant Ninja Turtles', setCode: 'TMT', packs: 34, image: '9/97/MTGTMNT_logo.jpg' },
+    { name: 'Innistrad: Midnight Hunt', setCode: 'MID', packs: 3, image: '8/8d/Midnight_Hunt_logo.png' },
+    { name: 'Ixalan', setCode: 'XLN', packs: 3, image: '1/19/XLN_set_logo.png' },
+    { name: 'Marvel\'s Spider-Man', setCode: 'SPM', packs: 32, image: '1/13/Spider-Man_logo.jpg' },
+    { name: 'Dungeons & Dragons: Adventures in the Forgotten Realms', setCode: 'AFR', packs: 2, image: '5/54/Forgotten_Realms_logo.png' },
+    { name: 'Conspiracy: Take the Crown', setCode: 'CN2', packs: 12, image: '4/4a/Conspiracy-_Take_the_Crown.png' },
+    { name: 'Commander Legends: Battle for Baldur\'s Gate', setCode: 'CLB', packs: 3, image: 'c/cf/Battle_for_Baldurs_Gate_logo.png' },
+    { name: 'Commander Legends', setCode: 'CMR', packs: 36, image: '9/97/CMR_logo.jpg' },
+    { name: 'Double Masters', setCode: '2XM', packs: 3, image: '2/2c/Double_masters_logo.png' },
+    { name: 'Unstable', setCode: 'UST', packs: 18, image: '9/95/UST_logo.png' },
+    { name: 'Modern Horizons', setCode: 'MH1', packs: 30, image: 'a/ad/Modern_Horizons_logo.png' },
+    { name: 'Murders at Karlov Manor', setCode: 'MKM', packs: 36, image: 'd/da/Murders_set_logo.jpg' },
+    { name: 'Lorwyn Eclipsed', setCode: 'ECL', packs: 30, image: 'a/ab/ECL_expansion_symbol.png' },
+    { name: 'Duskmourn: House of Horror', setCode: 'DSK', packs: 36, image: 'a/a1/Duskmourn_logo.jpg' },
+    { name: 'Mystery Booster 2', setCode: 'MB2', packs: 24, image: 'e/e9/Mystery_Booster_2_logo.png' },
+  ];
+
+  const tbody = document.getElementById('sealed-packs-body');
+  const sortSelect = document.getElementById('sort-select');
+  const filterPacksMin = document.getElementById('filter-packs-min');
+
+  function parseNumber(value) {
+    const parsed = parseInt(value, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  function applyFilters(list) {
+    const packsMin = parseNumber(filterPacksMin.value);
+
+    return list.filter(pack => {
+      const packCount = pack.packs || 0;
+
+      if (packsMin !== null && packCount < packsMin) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  function applySort(list) {
+    const sortValue = sortSelect.value;
+    const sortedList = [...list];
+
+    if (sortValue === 'packs-asc') {
+      sortedList.sort((a, b) => (a.packs || 0) - (b.packs || 0));
+    } else if (sortValue === 'packs-desc') {
+      sortedList.sort((a, b) => (b.packs || 0) - (a.packs || 0));
+    }
+
+    return sortedList;
+  }
+
+  function buildPackLabel(pack) {
+    return pack.setCode ? `${pack.name} (${pack.setCode})` : pack.name;
+  }
+
+  function renderPackRows() {
+    tbody.innerHTML = '';
+
+    const filtered = applyFilters(sealedPacks);
+    const sorted = applySort(filtered);
+
+    sorted.forEach(pack => {
+      const row = document.createElement('tr');
+      const imageCell = document.createElement('td');
+      const nameCell = document.createElement('td');
+      const packsCell = document.createElement('td');
+      const linksCell = document.createElement('td');
+      linksCell.className = 'links-cell';
+
+      if (pack.image) {
+        const img = document.createElement('img');
+        img.src = IMAGE_BASE + pack.image;
+        img.alt = pack.name;
+        img.style.maxWidth = '80px';
+        img.style.maxHeight = '80px';
+        img.style.objectFit = 'contain';
+        imageCell.appendChild(img);
+      }
+
+      const scryfallPriceLink = document.createElement('a');
+      scryfallPriceLink.href = `https://scryfall.com/search?q=set%3A${encodeURIComponent(pack.setCode)}+is%3Abooster+unique%3Aprints+sort%3AUSD&unique=cards&as=grid&order=name`;
+      scryfallPriceLink.target = '_blank';
+      scryfallPriceLink.rel = 'noopener noreferrer';
+      scryfallPriceLink.style.marginRight = '0.75rem';
+      const scryfallImage = document.createElement('img');
+      scryfallImage.src = 'https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/a/a2/Scryfall.jpg';
+      scryfallImage.alt = 'Prices';
+      scryfallImage.style.maxHeight = '20px';
+      scryfallImage.style.objectFit = 'contain';
+      scryfallPriceLink.appendChild(scryfallImage);
+      linksCell.appendChild(scryfallPriceLink);
+
+      const scryfallCommanderLink = document.createElement('a');
+      scryfallCommanderLink.href = `https://scryfall.com/search?q=set%3A${encodeURIComponent(pack.setCode)}+is%3Abooster+is%3Acommander&unique=cards&as=grid&order=name`;
+      scryfallCommanderLink.target = '_blank';
+      scryfallCommanderLink.rel = 'noopener noreferrer';
+      scryfallCommanderLink.style.marginRight = '0.75rem';
+      const commanderImage = document.createElement('img');
+      commanderImage.src = 'https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/5/5f/Commander.svg';
+      commanderImage.alt = 'Commanders';
+      commanderImage.style.maxHeight = '20px';
+      commanderImage.style.objectFit = 'contain';
+      scryfallCommanderLink.appendChild(commanderImage);
+      linksCell.appendChild(scryfallCommanderLink);
+
+      const tcgPlayerLink = document.createElement('a');
+      tcgPlayerLink.href = `https://www.tcgplayer.com/search/magic/product?productLineName=magic&q=${encodeURIComponent(pack.name)}+pack&view=grid`;
+      tcgPlayerLink.target = '_blank';
+      tcgPlayerLink.rel = 'noopener noreferrer';
+      const tcgPlayerImage = document.createElement('img');
+      tcgPlayerImage.src = 'https://static.wikia.nocookie.net/mtgsalvation_gamepedia/images/b/b8/Brainburst.jpg';
+      tcgPlayerImage.alt = 'TCG Player';
+      tcgPlayerImage.style.maxHeight = '20px';
+      tcgPlayerImage.style.objectFit = 'contain';
+      tcgPlayerImage.style.verticalAlign = 'middle';
+      tcgPlayerLink.appendChild(tcgPlayerImage);
+      linksCell.appendChild(tcgPlayerLink);
+
+      nameCell.textContent = buildPackLabel(pack);
+      packsCell.textContent = pack.packs || 0;
+
+      row.appendChild(imageCell);
+      row.appendChild(nameCell);
+      row.appendChild(packsCell);
+      row.appendChild(linksCell);
+      tbody.appendChild(row);
+    });
+  }
+
+  [sortSelect, filterPacksMin].forEach(input => {
+    input.addEventListener('change', renderPackRows);
+    input.addEventListener('input', renderPackRows);
+  });
+
+  renderPackRows();
+</script>
